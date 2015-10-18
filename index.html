@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+<meta charset='UTF-8'>
+<title>23118</title>
+<script src='./geojson-vt.js'></script>
+<script>
+var url =
+  'http://cyberjapandata.gsi.go.jp/xyz/1509typhoon18_suichokul_joso_150911_2/2/3/1.geojson';
+var tileIndex = null;
+var process = function(z, x, y) {
+  var jsonText = JSON.stringify(tileIndex.getTile(z, x, y));
+  if(jsonText.length > 4) {
+    console.log(z + '/' + x + '/' + y + ': ' +
+      Math.round(jsonText.length / 1024) + 'K');
+    for(var dx = 0; dx < 2; dx++) {
+      for(var dy = 0; dy < 2; dy++) {
+        if(z < 14) {
+          process(z + 1, 2 * x + dx, 2 * y + dy);
+        }
+      }
+    }
+  }
+}
+var req = new XMLHttpRequest();
+req.onreadystatechange = function() {
+  if(req.readyState == 4) {
+    if(req.status == 200) {
+      tileIndex = geojsonvt(JSON.parse(req.responseText));
+      process(2, 3, 1);
+    }
+  }
+};
+req.open('GET', url);
+req.send();
+</script>
+</head>
+<body>
+</body>
+</html>
