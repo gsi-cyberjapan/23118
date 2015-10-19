@@ -3,16 +3,65 @@
 <head>
 <meta charset='UTF-8'>
 <title>23118</title>
+<style>
+#editor {
+  position: absolute; top: 0; right:0; bottom: 0; left: 0;
+}
+</style>
+</head>
+<body>
+<div id='editor'></div>
 <script src='./geojson-vt.js'></script>
+<script src='//cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ace.min.js'></script>
 <script>
 var url =
   'http://cyberjapandata.gsi.go.jp/xyz/1509typhoon18_suichokul_joso_150911_2/2/3/1.geojson';
 var tileIndex = null;
+var coord = function(z, x, y, a, b) {
+  x = x + a / 4096.0;
+  y = y + b / 4096.0;
+  // @see http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+  var n = Math.PI - 2 * Math.PI * y / Math.pow(2, z);
+  return [
+    x / Math.pow(2,z) * 360 - 180,
+    180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))
+  ];
+}
+var toGeoJSON = function(z, x, y, vtJSON) {
+  var geoJSON = {type: 'FeatureCollection', features: []};
+  for(i in vtJSON.features) {
+    var feature = {type: 'Feature'};
+    // @see https://github.com/mapbox/vector-tile-spec/
+    switch(vtJSON.features[i].type) {
+      case 1: // POINT
+        feature.geometry = {
+          type: 'Point',
+          coordinates: coord(z, x, y,
+            vtJSON.features[i].geometry[0][0],
+            vtJSON.features[i].geometry[0][1])
+        };
+        break;
+      case 2: // LINESTRING
+      case 3: // POLYGON
+      default:
+        throw 'feature type ' + vtJSON.features[i].type +
+          ' not supported.';
+        break;
+    }
+    feature.properties = vtJSON.features[i].tags;
+    geoJSON.features.push(feature);
+  }
+  return geoJSON;
+}
 var process = function(z, x, y) {
   var jsonText = JSON.stringify(tileIndex.getTile(z, x, y));
   if(jsonText.length > 4) {
-    console.log(z + '/' + x + '/' + y + ': ' +
-      Math.round(jsonText.length / 1024) + 'K');
+    if(z == 14) {
+      editor.insert(JSON.stringify({
+        z: z, x: x, y: y,
+        tile: toGeoJSON(z, x, y, tileIndex.getTile(z, x, y))
+      }) + '\n');
+    }
     for(var dx = 0; dx < 2; dx++) {
       for(var dy = 0; dy < 2; dy++) {
         if(z < 14) {
@@ -22,6 +71,9 @@ var process = function(z, x, y) {
     }
   }
 }
+var editor = ace.edit('editor');
+editor.$blockScrolling = Infinity;
+
 var req = new XMLHttpRequest();
 req.onreadystatechange = function() {
   if(req.readyState == 4) {
@@ -34,7 +86,5 @@ req.onreadystatechange = function() {
 req.open('GET', url);
 req.send();
 </script>
-</head>
-<body>
 </body>
 </html>
