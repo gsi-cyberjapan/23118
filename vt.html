@@ -59,9 +59,28 @@ var toGeoJSON = function(z, x, y, vtJSON) {
         feature.geometry = {
           type: 'MultiLineString',
           coordinates: coords
-        }
+        };
         break;
       case 3: // MULTIPOLYGON
+        var coords = [];
+        for(j in vtJSON.features[i].geometry) {
+          var subcoords = [];
+          for(k in vtJSON.features[i].geometry[j]) {
+            var subsubcoords = [];
+            for(l in vtJSON.features[i].geometry[j][k]) {
+              subsubcoords.push(coord(z, x, y,
+                vtJSON.features[i].geometry[j][k][0],
+                vtJSON.features[i].geometry[j][k][1]));
+            }
+            subcoords.push(subsubcoords);
+          }
+          coords.push(subcoords);
+        }
+        feature.geometry = {
+          type: 'MultiPolygon',
+          coordinates: coords
+        };
+        break;
       default:
         throw 'feature type ' + vtJSON.features[i].type +
           ' not supported.';
